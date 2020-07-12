@@ -6,10 +6,13 @@
 //
 
 import UIKit
+//import Foundation
+
 
 class TodeyViewController: UITableViewController {
 
-    var todoeyArray : [String] = ["Home"]
+    var todoeyArray : [Item] = [Item(todoeyItem: "Home", accessory: false)]
+    
     
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -24,7 +27,8 @@ class TodeyViewController: UITableViewController {
         }
                 
         let action = UIAlertAction(title: "Add", style: .default) { (action) in
-            self.todoeyArray.append(textField.text!)
+            let item = Item(todoeyItem: textField.text!, accessory: false)
+            self.todoeyArray.append(item)
             self.tableView.reloadData()
         }
         alert.addAction(action)
@@ -39,8 +43,12 @@ class TodeyViewController: UITableViewController {
     
     override func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
         let cell = tableView.dequeueReusableCell(withIdentifier: "TodoeyCell", for: indexPath)
-        cell.textLabel?.text = todoeyArray[indexPath.row]
-        
+        cell.textLabel?.text = todoeyArray[indexPath.row].todoeyItem
+        if todoeyArray[indexPath.row].accessory == true {
+            cell.accessoryType = .checkmark
+        }else {
+            cell.accessoryType = .none
+        }
         return cell
     }
    
@@ -49,21 +57,18 @@ class TodeyViewController: UITableViewController {
     
     override func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
         
-        if let cell = tableView.cellForRow(at: indexPath) {            
-            if cell.accessoryType == .checkmark {
+        if let cell = tableView.cellForRow(at: indexPath) {
+            if todoeyArray[indexPath.row].accessory == true {
                 cell.accessoryType = .none
+                todoeyArray[indexPath.row].accessory = false
+                tableView.deselectRow(at: indexPath, animated: true)
             }else {
                 cell.accessoryType = .checkmark
+                todoeyArray[indexPath.row].accessory = true
+                tableView.deselectRow(at: indexPath, animated: true)
             }
 
         }
-        
     }
-
-    
-    
-   
-    
-
 }
 
