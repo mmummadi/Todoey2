@@ -12,16 +12,16 @@ import UIKit
 class TodeyViewController: UITableViewController {
 
    
-    var todoeyArray : [String] = []
+    var todoeyArray = [Item]()
     
     var defaults = UserDefaults()
     
     override func viewDidLoad() {
         super.viewDidLoad()
         // Do any additional setup after loading the view.
-        if let itemsArray = defaults.array(forKey: "todoeyItem") as? [String] {
-        todoeyArray = itemsArray
-        }
+        var newItem = Item()
+        newItem.title = "FirstTodoey"
+        todoeyArray.append(newItem)
        
     }
     
@@ -33,7 +33,8 @@ class TodeyViewController: UITableViewController {
         }
                 
         let action = UIAlertAction(title: "Add", style: .default) { (action) in
-            self.todoeyArray.append(textField.text!)
+            let item = Item(title: textField.text!, done: false)
+            self.todoeyArray.append(item)
             self.defaults.set(self.todoeyArray, forKey: "todoeyItem")
             self.tableView.reloadData()
         }
@@ -50,8 +51,9 @@ class TodeyViewController: UITableViewController {
     override func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
         let cell = tableView.dequeueReusableCell(withIdentifier: "TodoeyCell", for: indexPath)
        
-           cell.textLabel?.text = todoeyArray[indexPath.row]
-             
+        let item = todoeyArray[indexPath.row]
+        cell.textLabel?.text = item.title
+        cell.accessoryType =  item.done ?  .checkmark :  .none
         return cell
     }
    
@@ -59,17 +61,9 @@ class TodeyViewController: UITableViewController {
     //MARK: - UITableViewDelegate Methods
     
     override func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
-        
-        if let cell = tableView.cellForRow(at: indexPath) {
-            if cell.accessoryType == .none {
-                 cell.accessoryType = .checkmark
-                 tableView.deselectRow(at: indexPath, animated: true)
-            }else {
-                 cell.accessoryType = .none
-                 tableView.deselectRow(at: indexPath, animated: true)
-            }
-
-        }
+        todoeyArray[indexPath.row].done = !todoeyArray[indexPath.row].done
+        tableView.reloadData()
+        tableView.deselectRow(at: indexPath, animated: true)
     }
 }
 

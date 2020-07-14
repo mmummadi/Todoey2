@@ -8,6 +8,6 @@
 import Foundation
 
 struct Item {
-    var todoeyItem : String
-    var accessory : Bool
+    var title : String = ""
+    var done : Bool = false
 }
