@@ -16,7 +16,6 @@ class TodeyViewController: UITableViewController {
     let context = (UIApplication.shared.delegate as! AppDelegate).persistentContainer.viewContext
     var selectedCategory : Category1? {
         didSet{
-            
             loadItems()
         }
     }
@@ -26,9 +25,7 @@ class TodeyViewController: UITableViewController {
         super.viewDidLoad()
         // Do any additional setup after loading the view.
         searchBar.delegate = self
-    }
-    
-    
+    }       
     
     @IBAction func addTodoey(_ sender: UIBarButtonItem) {
         var textField = UITextField()
@@ -63,8 +60,8 @@ class TodeyViewController: UITableViewController {
        // let request : NSFetchRequest<Item> = Item.fetchRequest()
        let request : NSFetchRequest<Item> = Item.fetchRequest()
        let predicate2 = NSPredicate(format: "parent.name MATCHES %@", selectedCategory!.name!)
-        if let additionalPredicate = predicate {
-            let compoundPredicate = NSCompoundPredicate(andPredicateWithSubpredicates: [predicate2,additionalPredicate])
+        if let queryPredicate = predicate {
+            let compoundPredicate = NSCompoundPredicate(andPredicateWithSubpredicates: [predicate2,queryPredicate])
             request.predicate = compoundPredicate
         }else {
             request.predicate = predicate2
@@ -117,7 +114,6 @@ extension TodeyViewController : UISearchBarDelegate {
        
     func searchBarSearchButtonClicked(_ searchBar: UISearchBar) {
         let searchItem = searchBar.text!
-       
         let request : NSFetchRequest<Item> = Item.fetchRequest()
         let predicate = NSPredicate(format: "title CONTAINS[cd] %@", searchItem)
         request.sortDescriptors = [NSSortDescriptor(key: "title", ascending: true)]
