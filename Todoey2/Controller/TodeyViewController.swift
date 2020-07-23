@@ -7,13 +7,16 @@
 
 import UIKit
 import CoreData
+import RealmSwift
+import ChameleonFramework
 
 
-class TodeyViewController: UITableViewController {
+
+class TodeyViewController: SwipeTableViewController {
 
    
-    var todoeyArray = [Item]()
-    let context = (UIApplication.shared.delegate as! AppDelegate).persistentContainer.viewContext
+    var todoeyArray : Results<Item>?
+    let realm = try! Realm()
     var selectedCategory : Category1? {
         didSet{
             loadItems()
@@ -25,7 +28,27 @@ class TodeyViewController: UITableViewController {
         super.viewDidLoad()
         // Do any additional setup after loading the view.
         searchBar.delegate = self
-    }       
+        tableView.rowHeight = 80.0
+        tableView.separatorStyle = .none
+        
+    }
+    override func viewWillAppear(_ animated: Bool) {
+        if let colorHex = selectedCategory?.color {
+            title = selectedCategory?.name
+            guard let navbar = navigationController?.navigationBar else { fatalError("navigationcontroller not established")}
+            if let navbarColor = UIColor(hexString: colorHex){
+                navbar.barTintColor = navbarColor
+                navbar.tintColor = ContrastColorOf(navbarColor, returnFlat: true)
+               navbar.titleTextAttributes = [NSAttributedString.Key.foregroundColor : ContrastColorOf(navbarColor, returnFlat: true)]
+                searchBar.barTintColor = navbarColor
+            }
+            
+        }
+        
+    }
+    override func viewWillDisappear(_ animated: Bool) {
+        navigationController?.navigationBar.barTintColor = UIColor(hexString : "34C759")
+    }
     
     @IBAction func addTodoey(_ sender: UIBarButtonItem) {
         var textField = UITextField()
@@ -35,58 +58,50 @@ class TodeyViewController: UITableViewController {
         }
                 
         let action = UIAlertAction(title: "Add", style: .default) { (action) in
-            
-            let item = Item(context: self.context)
-            item.title = textField.text!
-            item.done = false
-            item.parent = self.selectedCategory
-            self.todoeyArray.append(item)
-            self.saveItems()
+            if let currentCategory = self.selectedCategory {
+                do{
+                    try self.realm.write {
+                        let item = Item()
+                        item.title = textField.text!
+                        item.date = Date()
+                        
+                             currentCategory.items.append(item)
+                    }
+                }catch {
+                    print("error saving items")
+            }
+                    
+        }
+            self.tableView.reloadData()
         }
         alert.addAction(action)
         present(alert, animated: true, completion: nil)        
         
     }
     
-    func saveItems(){
-        do {
-            try context.save()
-        } catch {
-            print("error saving items\(error)")
-        }
-        tableView.reloadData()
-    }
-    func loadItems(request : NSFetchRequest<Item> = Item.fetchRequest(),predicate : NSPredicate? = nil) {
-       // let request : NSFetchRequest<Item> = Item.fetchRequest()
-       let request : NSFetchRequest<Item> = Item.fetchRequest()
-       let predicate2 = NSPredicate(format: "parent.name MATCHES %@", selectedCategory!.name!)
-        if let queryPredicate = predicate {
-            let compoundPredicate = NSCompoundPredicate(andPredicateWithSubpredicates: [predicate2,queryPredicate])
-            request.predicate = compoundPredicate
-        }else {
-            request.predicate = predicate2
-        }
-        
-        
-        do {
-          todoeyArray = try context.fetch(request)
-        } catch {
-            fatalError("Failed to fetch items: \(error)")
-        }
-        tableView.reloadData()
+    
+    func loadItems() {
+        todoeyArray = selectedCategory?.items.sorted(byKeyPath: "title",ascending: true)
+                         
+       tableView.reloadData()
     }
     
   //MARK: - UITableViewDatasource Methods
     override func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
-        todoeyArray.count
+        todoeyArray?.count ?? 1
     }
     
     override func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
-        let cell = tableView.dequeueReusableCell(withIdentifier: "TodoeyCell", for: indexPath)
-       
-        let item = todoeyArray[indexPath.row]
-        cell.textLabel?.text = item.title
-        cell.accessoryType =  item.done ?  .checkmark :  .none
+        
+        
+        let cell = super.tableView(tableView, cellForRowAt: indexPath)
+        if let bgcolor = selectedCategory?.color {
+            cell.backgroundColor = UIColor(hexString: bgcolor)?.darken(byPercentage: CGFloat(Double(indexPath.row)*0.1))
+        }
+        
+        cell.textLabel?.text = todoeyArray?[indexPath.row].title ?? "No items added yet"
+        cell.textLabel?.textColor = UIColor(contrastingBlackOrWhiteColorOn: cell.backgroundColor!, isFlat: true)
+        cell.accessoryType =  todoeyArray?[indexPath.row].done ?? false ?  .checkmark :  .none
         return cell
     }
    
@@ -94,9 +109,26 @@ class TodeyViewController: UITableViewController {
     //MARK: - UITableViewDelegate Methods
     
     override func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
-        todoeyArray[indexPath.row].done = !todoeyArray[indexPath.row].done
-        saveItems()
+        //
+        do {
+            try realm.write {
+              todoeyArray![indexPath.row].done = !todoeyArray![indexPath.row].done
+            }
+        }catch {
+            print("error while updating")
+        }
         tableView.deselectRow(at: indexPath, animated: true)
+        tableView.reloadData()
+    }
+    override func updateModel(at indexPath: IndexPath) {
+        do {
+            try self.realm.write {
+                self.realm.delete(self.todoeyArray![indexPath.row])
+                
+          }
+        }catch {
+            print("error deleting item")
+        }
     }
 }
 
@@ -114,11 +146,11 @@ extension TodeyViewController : UISearchBarDelegate {
        
     func searchBarSearchButtonClicked(_ searchBar: UISearchBar) {
         let searchItem = searchBar.text!
-        let request : NSFetchRequest<Item> = Item.fetchRequest()
-        let predicate = NSPredicate(format: "title CONTAINS[cd] %@", searchItem)
-        request.sortDescriptors = [NSSortDescriptor(key: "title", ascending: true)]
-        
-        loadItems(request : request,predicate: predicate)
+        todoeyArray = todoeyArray?.filter("title CONTAINS[cd] %@", searchItem).sorted(byKeyPath: "title", ascending: true)
+
         
     }
+    
+    
 }
+
